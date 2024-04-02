@@ -23,7 +23,7 @@ func init() {
 				slog.Debug("open db", "dsn", args[0])
 
 			default:
-				raw(args[0], args[1:]...)
+				raw(cmd, args[0], args[1:]...)
 			}
 		},
 	}
@@ -32,10 +32,18 @@ func init() {
 	rootCmd.AddCommand(rawCmd)
 }
 
-func raw(dsn string, sqls ...string) {
+func raw(cmd *cobra.Command, dsn string, sqls ...string) {
 	mass := app.NewApp()
 
 	for _, sql := range sqls {
-		mass.Raw(dsn, sql)
+		titles, data := mass.Raw(dsn, sql)
+
+		if name, err := cmd.Flags().GetString("type"); err == nil {
+			if name == "csv" {
+				app.Csv(titles, data)
+			} else {
+				app.Table(titles, data)
+			}
+		}
 	}
 }
