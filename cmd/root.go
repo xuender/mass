@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	_ "embed"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,29 +12,20 @@ import (
 
 // nolint
 var (
-	cfgFile   string
-	Version   string
+	cfgFile string
+	//go:embed version.txt
+	Version string
+	//go:embed build.txt
 	BuildTime string
 )
 
 // nolint
 var rootCmd = &cobra.Command{
 	Use:   "mass",
-	Short: "mass",
+	Short: "Mass",
 	Long: fmt.Sprintf(`mass
 
-Version: %s
-BuildTime: %s`, Version, BuildTime),
-	Run: func(cmd *cobra.Command, args []string) {
-		// if err := viper.ReadInConfig(); err == nil {
-		// 	s := InitService(cmd)
-
-		// 	s.Run()
-		// } else {
-		// 	cs := InitConfigService(cmd)
-		// 	cs.Init()
-		// }
-	},
+Version: %sBuildTime: %s`, Version, BuildTime),
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

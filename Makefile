@@ -27,7 +27,7 @@ proto:
 	protoc --go_out=. pb/*.proto
 
 build:
-	echo ${VERSION} > build.txt
-	echo ${BUILD_TIME} >> build.txt
+	echo ${VERSION} > cmd/version.txt
+	echo ${BUILD_TIME} > cmd/build.txt
 	CGO_ENABLED=0 go build \
   -o dist/mass main.go
