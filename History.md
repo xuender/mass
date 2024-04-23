@@ -6,6 +6,6 @@
 - feat: raw format csv
 - feat: check, init, exec, raw, version
 
-  # 0.0.1 / 2024-04-02
+# 0.0.1 / 2024-04-02
 
 - init
