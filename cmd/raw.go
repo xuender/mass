@@ -28,21 +28,25 @@ func init() {
 		},
 	}
 
-	rawCmd.Flags().StringP("type", "t", "table", "table, csv")
+	rawCmd.Flags().StringP("type", "t", "grid", "grid, csv, json, toml, yaml")
 	rootCmd.AddCommand(rawCmd)
 }
 
 func raw(cmd *cobra.Command, dsn string, sqls ...string) {
-	mass := app.NewApp()
+	mass := app.NewApp(cmd)
 
 	for _, sql := range sqls {
 		titles, data := mass.Raw(dsn, sql)
 
 		if name, err := cmd.Flags().GetString("type"); err == nil {
-			if name == "csv" {
+			switch name {
+			case "json":
+			case "toml":
+			case "yaml":
+			case "csv":
 				app.Csv(titles, data)
-			} else {
-				app.Table(titles, data)
+			default:
+				app.Grid(titles, data)
 			}
 		}
 	}

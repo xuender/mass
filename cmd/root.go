@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"log/slog"
@@ -19,6 +20,14 @@ var (
 	BuildTime string
 )
 
+type debugHandler struct {
+	slog.Handler
+}
+
+func (p *debugHandler) Enabled(_ context.Context, level slog.Level) bool {
+	return level >= slog.LevelDebug
+}
+
 // nolint
 var rootCmd = &cobra.Command{
 	Use:   "mass",
@@ -26,6 +35,12 @@ var rootCmd = &cobra.Command{
 	Long: fmt.Sprintf(`mass
 
 Version: %sBuildTime: %s`, Version, BuildTime),
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if debug, _ := cmd.Flags().GetBool("debug"); debug {
+			logger := slog.New(&debugHandler{Handler: slog.NewTextHandler(os.Stderr, nil)})
+			slog.SetDefault(logger)
+		}
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -38,6 +53,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config (default: $HOME/mass.toml)")
+	rootCmd.PersistentFlags().BoolP("debug", "d", false, "debug mode")
 }
 
 func initConfig() {

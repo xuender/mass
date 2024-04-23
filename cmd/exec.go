@@ -7,6 +7,8 @@ import (
 	"github.com/xuender/mass/app"
 )
 
+const _minRows = 10_000
+
 // nolint: gochecknoinits
 func init() {
 	execCmd := &cobra.Command{
@@ -23,16 +25,17 @@ func init() {
 				slog.Debug("open db", "dsn", args[0])
 
 			default:
-				exec(args[0], args[1:]...)
+				exec(cmd, args[0], args[1:]...)
 			}
 		},
 	}
 
+	execCmd.Flags().Int64P("min-rows", "m", _minRows, "min rows")
 	rootCmd.AddCommand(execCmd)
 }
 
-func exec(dsn string, sqls ...string) {
-	mass := app.NewApp()
+func exec(cmd *cobra.Command, dsn string, sqls ...string) {
+	mass := app.NewApp(cmd)
 
 	for _, sql := range sqls {
 		mass.Exec(dsn, sql)
