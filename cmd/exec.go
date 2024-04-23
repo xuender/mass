@@ -31,13 +31,15 @@ func init() {
 	}
 
 	execCmd.Flags().Int64P("min-rows", "m", _minRows, "min rows")
+	execCmd.Flags().BoolP("not-exec", "n", false, "generate sql but do not exec")
 	rootCmd.AddCommand(execCmd)
 }
 
 func exec(cmd *cobra.Command, dsn string, sqls ...string) {
 	mass := app.NewApp(cmd)
+	not, _ := cmd.Flags().GetBool("not-exec")
 
 	for _, sql := range sqls {
-		mass.Exec(dsn, sql)
+		mass.Exec(dsn, sql, not)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/xuender/kit/los"
 	"github.com/xuender/mass/pb"
+	"gorm.io/gorm"
 )
 
 const _dsnNotFound = "dsn not found: "
@@ -30,7 +31,7 @@ func NewApp(cmd *cobra.Command) *App {
 	}
 }
 
-func (p *App) Exec(dsnKey, sql string) {
+func (p *App) Exec(dsnKey, sql string, notExec bool) {
 	slog.Debug("Exec", "dsn", dsnKey, "sql", sql)
 
 	dsn, has := p.cfg.GetDsn()[dsnKey]
@@ -40,8 +41,8 @@ func (p *App) Exec(dsnKey, sql string) {
 
 	gdb := NewDB(dsn)
 	table := NewTable(sql)
-	one := false
 
+	one := false
 	if rows := table.Explain(dsn, gdb); rows < p.minRows {
 		one = true
 	}
@@ -52,26 +53,23 @@ func (p *App) Exec(dsnKey, sql string) {
 	}
 
 	if one {
-		res := gdb.Exec(sql)
-		los.Must0(res.Error)
-		slog.Debug("exec", "one", one, "min", p.minRows)
-		fmt.Fprintf(os.Stdout, "Rows Affected: %d, min: %d\n", res.RowsAffected, p.minRows)
+		fmt.Fprintf(os.Stdout, "%s;\n", sql)
+
+		if notExec {
+			los.Must0(p.exec(gdb, sql))
+		}
 
 		return
 	}
 
-	slog.Debug("exec", "count", count)
-
 	pks := table.Pks(dsn, gdb)
 	update := fmt.Sprintf("%s ORDER BY `%s` LIMIT %d", sql, strings.Join(pks, "`,`"), p.minRows)
-	slog.Debug("update", "sql", update)
+	slog.Debug("exec", "update", update, "count", count)
+	fmt.Fprintf(os.Stdout, "%s;\n", update)
 
-	ctx := gdb.Exec(update)
-	if ctx.Error != nil {
-		panic(ctx.Error)
+	if !notExec {
+		los.Must0(p.exec(gdb, update))
 	}
-
-	fmt.Fprintf(os.Stdout, "Rows Affected: %d, Min Rows: %d\n", ctx.RowsAffected, p.minRows)
 
 	table.Iterator(dsn, gdb, p.minRows, func(where string) error {
 		exe := sql
@@ -81,16 +79,26 @@ func (p *App) Exec(dsnKey, sql string) {
 			exe += " WHERE" + where[4:]
 		}
 
-		slog.Debug("row", "where", where, "sql", sql, "exe", exe)
+		slog.Debug("exec", "update", exe)
+		fmt.Fprintf(os.Stdout, "%s;\n", exe)
 
-		ctx := gdb.Exec(exe)
-
-		if ctx.Error == nil {
-			fmt.Fprintf(os.Stdout, "Rows Affected: %d, Min Rows: %d\n", ctx.RowsAffected, p.minRows)
+		if !notExec {
+			return p.exec(gdb, exe)
 		}
 
-		return ctx.Error
+		return nil
 	})
+}
+
+func (p *App) exec(gdb *gorm.DB, sql string) error {
+	ctx := gdb.Exec(sql)
+	if ctx.Error != nil {
+		return ctx.Error
+	}
+
+	fmt.Fprintf(os.Stdout, "Rows Affected: %d, Min Rows: %d\n", ctx.RowsAffected, p.minRows)
+
+	return nil
 }
 
 func (p *App) Raw(dsn, sql string) ([]string, []map[string]any) {
