@@ -5,7 +5,9 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"github.com/xuender/kit/los"
 	"github.com/xuender/mass/pb"
@@ -28,6 +30,61 @@ func NewApp(cmd *cobra.Command) *App {
 	return &App{
 		cfg:     pb.NewConfig(),
 		minRows: minRows,
+	}
+}
+
+func (p *App) Delete(dsnKey, sql string, notExec bool) {
+	slog.Debug("Delete", "dsn", dsnKey, "sql", sql)
+
+	dsn, has := p.cfg.GetDsn()[dsnKey]
+	if !has {
+		panic(_dsnNotFound + dsnKey)
+	}
+
+	gdb := NewDB(dsn)
+	table := NewTable(sql)
+
+	one := false
+
+	count := table.Explain(dsn, gdb)
+	if count < p.minRows {
+		one = true
+	}
+
+	// count, _ := table.Count(dsn, gdb).(int64)
+	// if !one && count < p.minRows {
+	// 	one = true
+	// }
+
+	if one {
+		fmt.Fprintf(os.Stdout, "%s;\n", sql)
+
+		if !notExec {
+			los.Must0(p.exec(gdb, sql))
+		}
+
+		return
+	}
+
+	delSQL := fmt.Sprintf("%s LIMIT %d", sql, p.minRows)
+
+	slog.Debug("del", "sql", delSQL, "count", count)
+	fmt.Fprintf(os.Stdout, "%s;\n", delSQL)
+
+	if !notExec {
+		var sum int64
+
+		for {
+			row := lo.Must(p.execAffected(gdb, delSQL))
+			sum += row
+			fmt.Fprintf(os.Stdout,
+				"%s Rows Affected: %d, Count: %d, Min Rows: %d\n",
+				time.Now().Format("15:04:05"), row, sum, p.minRows)
+
+			if row < p.minRows {
+				return
+			}
+		}
 	}
 }
 
@@ -83,7 +140,7 @@ func (p *App) Exec(dsnKey, sql string, notExec bool) {
 		fmt.Fprintf(os.Stdout, "%s;\n", exe)
 
 		if !notExec {
-			return p.exec(gdb, exe)
+			los.Must0(p.exec(gdb, exe))
 		}
 
 		return nil
@@ -99,6 +156,12 @@ func (p *App) exec(gdb *gorm.DB, sql string) error {
 	fmt.Fprintf(os.Stdout, "Rows Affected: %d, Min Rows: %d\n", ctx.RowsAffected, p.minRows)
 
 	return nil
+}
+
+func (p *App) execAffected(gdb *gorm.DB, sql string) (int64, error) {
+	ctx := gdb.Exec(sql)
+
+	return ctx.RowsAffected, ctx.Error
 }
 
 func (p *App) Raw(dsn, sql string) ([]string, []map[string]any) {

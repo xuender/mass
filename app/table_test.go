@@ -38,10 +38,10 @@ func TestIteratorWhere(t *testing.T) {
 	pks := []string{"k1"}
 	row := []any{3}
 
-	ass.Equal(" AND (`k1` > 3 OR `k1` = 3)", app.IteratorWhere(pks, row))
+	ass.Equal(" AND `k1` > 3", app.IteratorWhere(pks, row))
 
 	row = []any{"a"}
-	ass.Equal(" AND (`k1` > 'a' OR `k1` = 'a')", app.IteratorWhere(pks, row))
+	ass.Equal(" AND `k1` > 'a'", app.IteratorWhere(pks, row))
 }
 
 func TestIteratorWhere_2(t *testing.T) {
@@ -51,7 +51,7 @@ func TestIteratorWhere_2(t *testing.T) {
 	pks := []string{"k1", "k2"}
 	row := []any{3, "a"}
 
-	ass.Equal(" AND (`k1` > 3 OR (`k1` = 3 AND (`k2` > 'a' OR `k2` = 'a')))", app.IteratorWhere(pks, row))
+	ass.Equal(" AND (`k1` > 3 OR (`k1` = 3 AND `k2` > 'a'))", app.IteratorWhere(pks, row))
 }
 
 func TestIteratorWhere_3(t *testing.T) {
@@ -61,5 +61,5 @@ func TestIteratorWhere_3(t *testing.T) {
 	pks := []string{"k1", "k2", "k3"}
 	row := []any{3, "a", 9}
 	// nolint: lll
-	ass.Equal(" AND (`k1` > 3 OR (`k1` = 3 AND (`k2` > 'a' OR (`k2` = 'a' AND (`k3` > 9 OR `k3` = 9)))))", app.IteratorWhere(pks, row))
+	ass.Equal(" AND (`k1` > 3 OR (`k1` = 3 AND (`k2` > 'a' OR (`k2` = 'a' AND `k3` > 9))))", app.IteratorWhere(pks, row))
 }

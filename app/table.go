@@ -144,6 +144,16 @@ func IteratorWhere(pks []string, row []any) string {
 	list := []string{}
 
 	for idx, key := range pks {
+		if idx == len(pks)-1 {
+			if IsNumber(row[idx]) {
+				list = append(list, fmt.Sprintf(" AND `%s` > %v", key, row[idx]))
+			} else {
+				list = append(list, fmt.Sprintf(" AND `%s` > '%v'", key, row[idx]))
+			}
+
+			break
+		}
+
 		if IsNumber(row[idx]) {
 			list = append(list, fmt.Sprintf(" AND (`%s` > %v OR `%s` = %v)", key, row[idx], key, row[idx]))
 		} else {
